@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      table thead tr {
+        background-color: #cbc3e3;
+        position: sticky;
+        top: 0%;
+      }
+      table tbody tr {
+        height: 1.5em;
+        background-color: lavender;
+        border-bottom: 1px solid black;
+      }
+      td.n {
+        text-align: right;
+      }
+      #searchbox {
+        background-color: antiquewhite;
+        position: sticky;
+        top: 0%;
+        left: 0%;
+        display: flex;
+        flex-direction: row-reverse;
+        align-items: center;
+      }
+      #tableDiv {
+        overflow-y: scroll;
+      }
+      #searchbox div {
+        flex-grow: 0;
+        padding: 0.3em;
+      }
+      div #srchBx {
+        flex-grow: 1;
+        display: flex;
+      }
+      div #cocksNum {
+        text-align: right;
+        color: darkgreen;
+        width: 2em;
+      }
+      #myInput {
+        position: relative;
+        flex-grow: 1;
+      }
+    </style>
+    <script>
+      const data = [[false, 'Vodka', 'Водка', '1'],[true, 'Pivo', 'Пиво', '9'],[false, 'Martini', 'Мартини', '9'],];
+      const coctails = [[40, 'Ерш', [0, 1]],[7, 'Водка Мартини', [0, 2]],];
+      var availCocks = [];
+      function calcAvailCocks() {
+        availCocks = [];
+        for (var i = 0; i < data.length; i++) {
+          data[i][1] = 0;
+        }
+        for (var i = 0; i < coctails.length; i++) {
+          var coc = coctails[i];
+          var allFound = 0;
+          var ingrOne = 0;
+          for (var j = 0; j < coc[2].length; j++) {
+            var ingrId = coc[2][j];
+            if (data[ingrId][0] == false) {
+              allFound += 1;
+              ingrOne = ingrId;
+            }
+          }
+          if (allFound == 0) {
+            availCocks.push(coc);
+          }
+          if (allFound == 1) {
+            data[ingrOne][1] += 1;
+          }
+        }
+        document.getElementById("cocksNum").innerHTML =
+          "<b>" + availCocks.length + "</b>";
+      }
+      showIngrs = true;
+      function getIngrTblHtml() {
+        var tr =
+          "<table id='ingrTable'><thead><tr class='header'><th>Нали чие</th><th>Ингридиент</th><th>Коктейлей</th></tr></thead><tbody>";
+        for (var i = 0; i < data.length; i++) {
+          tr += "<tr onclick=ingrCb(" + i + ") >";
+          tr +=
+            "<td><input type='checkbox' id='ingrCb_" +
+            i +
+            "'" +
+            (data[i][0] ? "checked" : "") +
+            ">"+ ((data[i][0] || !(data[i][1] > 0)) ? "" : "+" + data[i][1]) + 
+            "</input></td>";
+          tr += "<td>" + data[i][2] + "</td>";
+          tr += "<td class='n'>" + data[i][3] + "</td>";
+          tr += "</tr>";
+        }
+        tr += "</tbody></table>";
+        return tr;
+      }
+      function getCockTblHtml() {
+        var tr =
+          "<table id='ingrTable'><thead><tr class='header'><th>Название</th><th style='width:300;'>Ингридиенты</th><th>Link</th></tr></thead><tbody>";
+        for (var i = 0; i < availCocks.length; i++) {
+          var coc = availCocks[i];
+          tr += "<tr>";
+          tr += "<td>" + coc[1] + "</td>";
+          tr += "<td>";
+          for (var j = 0; j < coc[2].length; j++) {
+            var ingrId = coc[2][j];
+            tr += data[ingrId][2] + ", ";
+          }
+          tr += "</td>";
+          tr +=
+            "<td><a href='https://ru.inshaker.com/cocktails/" +
+            coc[0] +
+            "'>LNK</a></td>";
+          tr += "</tr>";
+        }
+        tr += "</tbody></table>";
+        return tr;
+      }
+      function showTbl() {
+        tblHtml = "";
+        abtn = ">";
+        if (showIngrs) {
+          tblHtml = getIngrTblHtml();
+        } else {
+          abtn = "<";
+          tblHtml = getCockTblHtml();
+        }
+        document.getElementById("showBtn").innerText = abtn;
+        document.getElementById("tableDiv").innerHTML = tblHtml;
+      }
+      function switchTbl() {
+        if (showIngrs) {
+          showIngrs = false;
+        } else {
+          showIngrs = true;
+        }
+        showTbl();
+      }
+      function oload() {
+        var t = "";
+        var dat0raw = localStorage.getItem("dataa");
+        if (dat0raw != null) {
+          var dat0 = JSON.parse(dat0raw);
+          if (dat0.length == data.length) {
+            for (var i = 0; i < data.length; i++) {
+              data[i][0] = dat0[i][0];
+              data[i][1] = 0;
+            }
+          }
+        }
+        calcAvailCocks();
+        showTbl();
+        const searchboxHeit = document.getElementById("searchbox").clientHeight;
+        document.getElementById(
+          "tableDiv"
+        ).style = `height: calc(100vh - ${searchboxHeit}px)`;
+      }
+      const searchFunction = () => {
+        const trs = document.querySelectorAll("#ingrTable tr:not(.header)");
+        const filter = document.querySelector("#myInput").value;
+        const regex = new RegExp(filter, "i");
+        const isFoundInTds = (td) => regex.test(td.innerHTML);
+        const isFound = (childrenArr) => childrenArr.some(isFoundInTds);
+        const setTrStyleDisplay = ({ style, children }) => {
+          style.display = isFound([...children]) ? "" : "none";
+        };
+        trs.forEach(setTrStyleDisplay);
+      };
+      function ingrCb(i) {
+        data[i][0] = !data[i][0];
+        document.getElementById("ingrCb_" + i).checked = data[i][0];
+        localStorage.setItem("dataa", JSON.stringify(data));
+        calcAvailCocks();
+        showTbl();
+      }
+    </script>
+    <title>Searcher</title>
+  </head>
+  <body onload="oload();">
+    <div id="main">
+      <div id="searchbox">
+        <div id="cocksNum"></div>
+        <div>
+          <button id="showBtn" onclick="switchTbl();"></button>
+        </div>
+        <div>
+          <button
+            onclick="document.getElementById('myInput').value = ''; searchFunction()"
+          >
+            X
+          </button>
+        </div>
+        <div id="srchBx">
+          <input
+            type="text"
+            id="myInput"
+            onkeyup="searchFunction()"
+            placeholder="Search for ingridients.."
+          />
+        </div>
+      </div>
+      <div id="tableDiv"></div>
+    </div>
+  </body>
+</html>
